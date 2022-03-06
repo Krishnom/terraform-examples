@@ -1,0 +1,40 @@
+---
+- hosts: web
+  become: yes
+  vars:
+    server_name: "{{ ansible_default_ipv4.address }}"
+    document_root: /var/www/html
+    app_root: html_demo_site-main
+
+  tasks:
+  - name: install nginx
+    apt: name=nginx state=present update_cache=yes
+
+  - name: Apply Nginx template
+    template:
+      src: templates/nginx.conf.j2
+      dest: /etc/nginx/sites-available/default
+    notify: Restart Nginx
+  
+  - name: Enable new site
+    file:
+      src: /etc/nginx/sites-available/default
+      dest: /etc/nginx/sites-enabled/default
+      state: link
+    notify: Restart Nginx
+
+  - name: Creates directory
+    file:
+      path: "{{ document_root }}/{{ app_root }}"
+      state: directory
+  
+  - name: deploy website content
+    template: src=templates/index.html.j2 dest="{{ document_root }}/{{ app_root }}/index.html"
+
+  - name: start nginx
+    service: name=nginx state=started
+
+  handlers:
+
+  - name: Restart Nginx
+    service: name=nginx state=restarted
